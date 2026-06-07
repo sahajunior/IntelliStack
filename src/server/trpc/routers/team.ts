@@ -154,9 +154,6 @@ export const teamRouter = createTRPCRouter({
             inviterUserId: ctx.userId,
             emailAddress: input.email.toLowerCase(),
             role: input.role,
-            redirectUrl: process.env.NEXT_PUBLIC_APP_URL
-              ? `${process.env.NEXT_PUBLIC_APP_URL}/team`
-              : undefined,
           });
 
         return serializeInvitation(invitation);
