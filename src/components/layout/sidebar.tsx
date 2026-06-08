@@ -1,6 +1,6 @@
 "use client";
 
-import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
+import { OrganizationSwitcher, UserButton, useClerk } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -30,7 +30,42 @@ function MenuIcon({ open }: Readonly<{ open: boolean }>) {
   );
 }
 
-function SidebarContent({ onNavigate }: Readonly<{ onNavigate?: () => void }>) {
+function DemoAccountControls({ compact = false }: Readonly<{ compact?: boolean }>) {
+  const { signOut } = useClerk();
+
+  return (
+    <button
+      className={`flex items-center gap-3 rounded-lg text-left text-sm text-slate-300 transition hover:text-white ${
+        compact ? "px-2 py-1" : "w-full px-2 py-2"
+      }`}
+      onClick={() => void signOut({ redirectUrl: "/sign-in" })}
+      type="button"
+    >
+      <span className="grid size-8 place-items-center rounded-full bg-indigo-600 text-xs font-semibold text-white">
+        D
+      </span>
+      <span>{compact ? "Sign out" : "Demo · Sign out"}</span>
+    </button>
+  );
+}
+
+function AccountControls({ isDemoUser }: Readonly<{ isDemoUser: boolean }>) {
+  if (isDemoUser) {
+    return <DemoAccountControls />;
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <UserButton />
+      <span className="text-sm text-slate-300">Account</span>
+    </div>
+  );
+}
+
+function SidebarContent({
+  isDemoUser,
+  onNavigate,
+}: Readonly<{ isDemoUser: boolean; onNavigate?: () => void }>) {
   const pathname = usePathname();
 
   return (
@@ -77,23 +112,26 @@ function SidebarContent({ onNavigate }: Readonly<{ onNavigate?: () => void }>) {
       </nav>
 
       <div className="border-t border-slate-800 p-4">
-        <div className="mb-4">
-          <OrganizationSwitcher
-            afterCreateOrganizationUrl="/"
-            afterSelectOrganizationUrl="/"
-            hidePersonal
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <UserButton />
-          <span className="text-sm text-slate-300">Account</span>
-        </div>
+        {isDemoUser ? (
+          <div className="mb-4 rounded-lg border border-indigo-400/30 bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-200">
+            Demo workspace · read-only
+          </div>
+        ) : (
+          <div className="mb-4">
+            <OrganizationSwitcher
+              afterCreateOrganizationUrl="/"
+              afterSelectOrganizationUrl="/"
+              hidePersonal
+            />
+          </div>
+        )}
+        <AccountControls isDemoUser={isDemoUser} />
       </div>
     </>
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ isDemoUser }: Readonly<{ isDemoUser: boolean }>) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -126,7 +164,7 @@ export function Sidebar() {
           <p className="text-xs text-slate-400">Organization dashboard</p>
         </div>
         <div className="flex items-center gap-3">
-          <UserButton />
+          {isDemoUser ? <DemoAccountControls compact /> : <UserButton />}
           <button
             aria-expanded={open}
             aria-label={open ? "Close navigation menu" : "Open navigation menu"}
@@ -140,7 +178,7 @@ export function Sidebar() {
       </div>
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-slate-800 bg-slate-950 text-white md:flex">
-        <SidebarContent />
+        <SidebarContent isDemoUser={isDemoUser} />
       </aside>
 
       {open ? (
@@ -162,7 +200,10 @@ export function Sidebar() {
                 <MenuIcon open />
               </button>
             </div>
-            <SidebarContent onNavigate={() => setOpen(false)} />
+            <SidebarContent
+              isDemoUser={isDemoUser}
+              onNavigate={() => setOpen(false)}
+            />
           </aside>
         </div>
       ) : null}

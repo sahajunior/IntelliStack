@@ -32,7 +32,10 @@ function ChangeLabel({
   );
 }
 
-export function DashboardMetrics({ orgId }: Readonly<{ orgId: string }>) {
+export function DashboardMetrics({
+  isDemoUser,
+  orgId,
+}: Readonly<{ isDemoUser: boolean; orgId: string }>) {
   const summary = trpc.metrics.getKPISummary.useQuery();
   const history = trpc.metrics.getLast30Days.useQuery();
 
@@ -121,7 +124,7 @@ export function DashboardMetrics({ orgId }: Readonly<{ orgId: string }>) {
         <SignupsChart data={historyData} />
       </div>
 
-      <ActivityFeed orgId={orgId} />
+      <ActivityFeed isDemoUser={isDemoUser} orgId={orgId} />
     </div>
   );
 }

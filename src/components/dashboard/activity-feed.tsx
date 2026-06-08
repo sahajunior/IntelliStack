@@ -67,7 +67,10 @@ function mergeEvent(events: ActivityEvent[], event: ActivityEvent) {
   return [event, ...events.filter((item) => item.id !== event.id)].slice(0, 20);
 }
 
-export function ActivityFeed({ orgId }: Readonly<{ orgId: string }>) {
+export function ActivityFeed({
+  isDemoUser,
+  orgId,
+}: Readonly<{ isDemoUser: boolean; orgId: string }>) {
   const configured = isPusherClientConfigured();
   const query = trpc.activity.getRecentEvents.useQuery();
   const [liveEvents, setLiveEvents] = useState<ActivityEvent[]>([]);
@@ -175,14 +178,20 @@ export function ActivityFeed({ orgId }: Readonly<{ orgId: string }>) {
             Workspace events
           </h2>
         </div>
-        <button
-          className="rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          disabled={!configured || mutation.isPending}
-          onClick={createTestEvent}
-          type="button"
-        >
-          {mutation.isPending ? "Sending…" : "Send test event"}
-        </button>
+        {isDemoUser ? (
+          <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+            Demo read-only
+          </span>
+        ) : (
+          <button
+            className="rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            disabled={!configured || mutation.isPending}
+            onClick={createTestEvent}
+            type="button"
+          >
+            {mutation.isPending ? "Sending…" : "Send test event"}
+          </button>
+        )}
       </div>
 
       {!configured ? (
@@ -220,7 +229,9 @@ export function ActivityFeed({ orgId }: Readonly<{ orgId: string }>) {
         <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-9 text-center">
           <p className="font-medium text-slate-700">No workspace events yet.</p>
           <p className="mt-1 text-sm text-slate-500">
-            Send a test event to verify delivery across multiple browser tabs.
+            {isDemoUser
+              ? "Live workspace events will appear here without allowing demo changes."
+              : "Send a test event to verify delivery across multiple browser tabs."}
           </p>
         </div>
       ) : null}

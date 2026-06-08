@@ -12,6 +12,7 @@ import { getPusherServer } from "@/server/pusher";
 import {
   createTRPCRouter,
   protectedProcedure,
+  writeProcedure,
 } from "@/server/trpc/init";
 
 const activityPayloadSchema = z.object({
@@ -55,7 +56,7 @@ export const activityRouter = createTRPCRouter({
     return rows.map(serializeActivityEvent);
   }),
 
-  createActivityEvent: protectedProcedure
+  createActivityEvent: writeProcedure
     .input(
       z.object({
         type: z.enum(activityTypes).default("report_generated"),

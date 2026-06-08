@@ -36,6 +36,22 @@ export function SettingsPage() {
   return <SettingsForm key={query.data.orgId} settings={query.data} />;
 }
 
+function DemoSettingsNotice() {
+  return (
+    <section className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5 shadow-sm sm:p-6">
+      <p className="text-sm font-semibold text-indigo-700">Demo read-only</p>
+      <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">
+        Account and workspace edits are locked
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+        Public demo visitors can inspect the dashboard, but they cannot change
+        the demo profile, email preferences, organization settings, or delete
+        the workspace.
+      </p>
+    </section>
+  );
+}
+
 function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
   const { organization } = useOrganization();
   const { isLoaded: userLoaded, user } = useUser();
@@ -58,11 +74,18 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
   const [personalSaving, setPersonalSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const isDemoUser = settings.isDemoUser;
+  const isAdmin = settings.isOrgAdmin && !isDemoUser;
+  const personalReadOnly = isDemoUser;
+
   const organizationDirty =
-    organizationName !== settings.organization.name ||
-    logoUrl !== settings.organization.logoUrl;
-  const displayNameDirty = displayName !== settings.personal.displayName;
+    !isDemoUser &&
+    (organizationName !== settings.organization.name ||
+      logoUrl !== settings.organization.logoUrl);
+  const displayNameDirty =
+    !personalReadOnly && displayName !== settings.personal.displayName;
   const notificationsDirty =
+    !personalReadOnly &&
     notificationsEnabled !== settings.personal.notificationsEnabled;
   const personalDirty = displayNameDirty || notificationsDirty;
   const dirty = organizationDirty || personalDirty;
@@ -95,7 +118,7 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
   const saveOrganization = (event: FormEvent) => {
     event.preventDefault();
 
-    if (!organizationDirty || updateOrganization.isPending) {
+    if (!isAdmin || !organizationDirty || updateOrganization.isPending) {
       return;
     }
 
@@ -110,6 +133,7 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
     event.preventDefault();
 
     if (
+      personalReadOnly ||
       !personalDirty ||
       personalSaving ||
       (displayNameDirty && (!userLoaded || !user))
@@ -161,8 +185,6 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
     [organizationName],
   );
 
-  const isAdmin = settings.isOrgAdmin;
-
   return (
     <>
       <section>
@@ -173,19 +195,29 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
               Settings
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Manage organization presentation and your account preferences.
+              {isDemoUser
+                ? "Demo settings are visible but locked for public visitors."
+                : "Manage organization presentation and your account preferences."}
             </p>
           </div>
           <span
             className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-              dirty
-                ? "bg-amber-100 text-amber-800"
-                : "bg-emerald-100 text-emerald-800"
+              isDemoUser
+                ? "bg-indigo-100 text-indigo-700"
+                : dirty
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-emerald-100 text-emerald-800"
             }`}
           >
-            {dirty ? "Unsaved changes" : "All changes saved"}
+            {isDemoUser
+              ? "Demo read-only"
+              : dirty
+                ? "Unsaved changes"
+                : "All changes saved"}
           </span>
         </div>
+
+        {isDemoUser ? <DemoSettingsNotice /> : null}
 
         <form
           className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
@@ -207,7 +239,7 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
               <p className="mt-1 text-sm text-slate-500">
                 {isAdmin
                   ? "Update the workspace name and optional hosted logo."
-                  : "Organization settings are read-only for members."}
+                  : "Organization settings are read-only here."}
               </p>
             </div>
           </div>
@@ -272,7 +304,9 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
             Personal settings
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Update your Clerk profile and workspace email preference.
+            {personalReadOnly
+              ? "Demo profile and preferences are locked."
+              : "Update your Clerk profile and workspace email preference."}
           </p>
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
@@ -281,8 +315,8 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
                 Display name
               </span>
               <input
-                className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                disabled={personalSaving}
+                className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none disabled:bg-slate-50 disabled:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                disabled={personalReadOnly || personalSaving}
                 maxLength={100}
                 onChange={(event) => setDisplayName(event.target.value)}
                 required
@@ -301,8 +335,8 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
               </span>
               <input
                 checked={notificationsEnabled}
-                className="size-5 accent-indigo-600"
-                disabled={personalSaving}
+                className="size-5 accent-indigo-600 disabled:cursor-not-allowed"
+                disabled={personalReadOnly || personalSaving}
                 onChange={(event) =>
                   setNotificationsEnabled(event.target.checked)
                 }
@@ -317,19 +351,21 @@ function SettingsForm({ settings }: Readonly<{ settings: SettingsData }>) {
             </p>
           ) : null}
 
-          <div className="mt-6 flex justify-end">
-            <button
-              className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              disabled={!personalDirty || personalSaving}
-              type="submit"
-            >
-              {personalSaving
-                ? "Saving…"
-                : personalSaveState === "saved"
-                  ? "Saved"
-                  : "Save personal settings"}
-            </button>
-          </div>
+          {!personalReadOnly ? (
+            <div className="mt-6 flex justify-end">
+              <button
+                className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={!personalDirty || personalSaving}
+                type="submit"
+              >
+                {personalSaving
+                  ? "Saving…"
+                  : personalSaveState === "saved"
+                    ? "Saved"
+                    : "Save personal settings"}
+              </button>
+            </div>
+          ) : null}
         </form>
 
         {isAdmin ? (

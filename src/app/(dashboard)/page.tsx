@@ -1,6 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 import { DashboardMetrics } from "@/components/dashboard/dashboard-metrics";
+import { isDemoUser } from "@/server/demo";
 
 export default async function DashboardPage() {
   const { orgId } = await auth();
@@ -8,6 +9,9 @@ export default async function DashboardPage() {
   if (!orgId) {
     throw new Error("An active organization is required.");
   }
+
+  const user = await currentUser();
+  const demoMode = isDemoUser(user);
 
   return (
     <section>
@@ -27,7 +31,7 @@ export default async function DashboardPage() {
         </span>
       </div>
 
-      <DashboardMetrics orgId={orgId} />
+      <DashboardMetrics isDemoUser={demoMode} orgId={orgId} />
 
       <p className="mt-6 text-center text-xs text-slate-400">
         Tenant scope: <code>{orgId}</code>

@@ -10,6 +10,7 @@ import {
   adminProcedure,
   createTRPCRouter,
   protectedProcedure,
+  writeProcedure,
 } from "@/server/trpc/init";
 
 function throwSettingsError(error: unknown, message: string): never {
@@ -47,6 +48,7 @@ export const settingsRouter = createTRPCRouter({
           "Workspace member",
         notificationsEnabled: stored?.notificationsEnabled ?? true,
       },
+      isDemoUser: ctx.isDemoUser,
       isOrgAdmin: ctx.isOrgAdmin,
     };
   }),
@@ -100,7 +102,7 @@ export const settingsRouter = createTRPCRouter({
       }
     }),
 
-  updateNotifications: protectedProcedure
+  updateNotifications: writeProcedure
     .input(z.object({ enabled: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const [settings] = await ctx.db

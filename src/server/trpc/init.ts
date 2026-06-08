@@ -1,9 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 
-import { assertOrganizationAdmin } from "@/server/team/policy";
 import { db } from "@/server/db";
+import { assertNotDemoUser, getDemoEmail, getDemoUserId, isDemoUser } from "@/server/demo";
+import { assertOrganizationAdmin } from "@/server/team/policy";
 
 export async function createTRPCContext() {
   const { userId, orgId, has } = await auth();
@@ -15,10 +16,14 @@ export async function createTRPCContext() {
     });
   }
 
+  const demoConfigured = Boolean(getDemoUserId() || getDemoEmail());
+  const user = demoConfigured ? await currentUser() : null;
+
   return {
     db,
     userId,
     orgId,
+    isDemoUser: isDemoUser(user),
     isOrgAdmin: has({ role: "org:admin" }),
   };
 }
@@ -31,7 +36,12 @@ const t = initTRPC.context<Context>().create({
 
 export const createTRPCRouter = t.router;
 export const protectedProcedure = t.procedure;
-export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+export const writeProcedure = protectedProcedure.use(({ ctx, next }) => {
+  assertNotDemoUser(ctx.isDemoUser);
+
+  return next({ ctx });
+});
+export const adminProcedure = writeProcedure.use(({ ctx, next }) => {
   assertOrganizationAdmin(ctx.isOrgAdmin);
 
   return next({ ctx });

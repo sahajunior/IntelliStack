@@ -74,9 +74,10 @@ export const teamRouter = createTRPCRouter({
       });
 
     return {
-      members: response.data.map(serializeMember),
+      members: ctx.isDemoUser ? [] : response.data.map(serializeMember),
       totalCount: response.totalCount,
       currentUserId: ctx.userId,
+      isDemoUser: ctx.isDemoUser,
     };
   }),
 
@@ -124,6 +125,14 @@ export const teamRouter = createTRPCRouter({
     }),
 
   getPendingInvitations: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.isDemoUser) {
+      return {
+        invitations: [],
+        totalCount: 0,
+        isDemoUser: true,
+      };
+    }
+
     const client = await clerkClient();
     const response =
       await client.organizations.getOrganizationInvitationList({
@@ -135,6 +144,7 @@ export const teamRouter = createTRPCRouter({
     return {
       invitations: response.data.map(serializeInvitation),
       totalCount: response.totalCount,
+      isDemoUser: false,
     };
   }),
 
