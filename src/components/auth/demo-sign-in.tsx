@@ -1,13 +1,20 @@
 "use client";
 
 import { useSignIn } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
+import { useSignIn as useLegacySignIn } from "@clerk/nextjs/legacy";
 import { useState } from "react";
 
 const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
 const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
 
 export function DemoSignIn() {
-  const { signIn, fetchStatus } = useSignIn();
+  const { fetchStatus } = useSignIn();
+  const {
+    isLoaded,
+    signIn: legacySignIn,
+    setActive,
+  } = useLegacySignIn();
   const [error, setError] = useState<string | null>(null);
 
   if (!demoEmail || !demoPassword) {
@@ -17,38 +24,36 @@ export function DemoSignIn() {
   const signInAsDemo = async () => {
     setError(null);
 
-    const result = await signIn.create({
-      identifier: demoEmail,
-      password: demoPassword,
-    });
+    if (!isLoaded || !legacySignIn) {
+      setError("Demo sign-in is still loading. Please try again.");
+      return;
+    }
 
-    if (result.error) {
+    try {
+      const result = await legacySignIn.create({
+        identifier: demoEmail,
+        password: demoPassword,
+        strategy: "password",
+      });
+
+      if (result.status !== "complete" || !result.createdSessionId) {
+        setError("Demo account requires an additional sign-in step.");
+        return;
+      }
+
+      await setActive({ session: result.createdSessionId });
+      window.location.assign("/");
+    } catch (signInError) {
       setError(
-        result.error.longMessage ??
-          "Demo sign-in failed. Please try again shortly.",
+        isClerkAPIResponseError(signInError)
+          ? (signInError.errors[0]?.longMessage ??
+              "Demo credentials are unavailable.")
+          : "Demo sign-in failed. Please try again shortly.",
       );
-      return;
     }
-
-    if (signIn.status !== "complete") {
-      setError("Demo account requires an additional sign-in step.");
-      return;
-    }
-
-    const finalizeResult = await signIn.finalize();
-
-    if (finalizeResult.error) {
-      setError(
-        finalizeResult.error.longMessage ??
-          "Demo session could not be started.",
-      );
-      return;
-    }
-
-    window.location.assign("/");
   };
 
-  const isPending = fetchStatus === "fetching";
+  const isPending = !isLoaded || fetchStatus === "fetching";
 
   return (
     <section className="mb-4 w-full rounded-xl border border-indigo-200 bg-indigo-50 p-4">
