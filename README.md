@@ -1,99 +1,152 @@
 # IntelliStack
 
-IntelliStack is a multi-tenant SaaS analytics dashboard. This repository
-currently implements **Phases 1–7** from [`PLAN.md`](./PLAN.md): the Next.js
-foundation, Clerk authentication, organization selection, Neon PostgreSQL,
-Drizzle migrations, tenant-scoped tRPC metrics, responsive KPI cards, and
-revenue/signup charts, plus a Pusher-backed real-time activity feed and
-organization presence count. A streamed OpenRouter chat assistant answers
-questions using the active organization's KPI history. The Clerk-backed Team
-page lists members and pending invitations, with admin-only invitation, role,
-removal, and cancellation controls. The Settings page supports organization
-branding, Clerk profile updates, notification preferences, dirty-state
-warnings, and an admin-only typed-confirmation danger zone.
+IntelliStack is a multi-tenant analytics dashboard for SaaS teams. Each organization has its own metrics, members, activity feed, settings, and AI chat history.
 
-## Requirements
+**Live demo:** [intelli-stack.vercel.app](https://intelli-stack.vercel.app)
 
-- Node.js 20.9 or newer
-- A Clerk application with Organizations enabled
+## Features
 
-## Local setup
+### Analytics dashboard
+
+- Revenue, new users, active sessions, and churn KPIs
+- 30-day revenue chart
+- Weekly signup chart
+- Organization-scoped data
+- Responsive desktop and mobile layout
+
+### Authentication and organizations
+
+- Email and Google sign-in with Clerk
+- Organization creation and switching
+- Administrator and member roles
+- Tenant isolation using the active Clerk organization
+
+### Real-time activity
+
+- Live workspace events with Pusher Channels
+- Recent activity history
+- Online member count through presence channels
+
+### AI assistant
+
+- Streaming responses through OpenRouter and the Vercel AI SDK
+- Answers based on the active organization's metrics
+- Chat history stored per user and organization
+- Markdown response rendering
+
+### Team management
+
+- Organization member list
+- Member invitations
+- Role changes
+- Member removal
+- Pending invitation management
+- Server-side administrator checks
+
+### Settings
+
+- Organization name and logo URL
+- Personal display name
+- Email notification preference
+- Organization deletion with typed confirmation
+
+### Public demo
+
+- One-click demo sign-in
+- Short-lived Clerk sign-in tokens
+- No public demo password
+- Read-only access
+- Team emails and invitations hidden
+- Account, organization, and mutation controls locked
+
+## Tech Stack
+
+| Area | Technology |
+|---|---|
+| Framework | Next.js 16 |
+| Language | TypeScript |
+| Authentication | Clerk |
+| API | tRPC |
+| Database | Neon PostgreSQL |
+| ORM | Drizzle ORM |
+| Real-time | Pusher Channels |
+| AI | OpenRouter + Vercel AI SDK |
+| Charts | Recharts |
+| Styling | Tailwind CSS |
+| Deployment | Vercel |
+| CI | GitHub Actions |
+
+## Local Setup
+
+### 1. Install dependencies
 
 ```bash
 npm install
-cp .env.example .env.local
-npm run dev
 ```
 
-Add the publishable and secret keys from the Clerk dashboard to `.env.local`.
-In Clerk, enable Organizations and require organization membership for the
-intended signup flow.
-
-Add the pooled Neon PostgreSQL connection string as `DATABASE_URL`.
-
-Create a Pusher Channels application and add its app key, cluster, app ID, and
-secret using the variable names in `.env.example`.
-
-Create an OpenRouter API key and configure `OPENROUTER_MODEL`. The development
-default uses `nvidia/nemotron-3-super-120b-a12b:free`.
-
-Then open <http://localhost:3000>. An unauthenticated visitor is sent to
-`/sign-in`; a signed-in user without an active organization is sent to
-`/create-organization`.
-
-## Database
-
-Generate and apply migrations:
+### 2. Create the environment file
 
 ```bash
-npm run db:generate
+cp .env.example .env.local
+```
+
+Add your Clerk, Neon, Pusher, and OpenRouter values to `.env.local`.
+
+### 3. Apply database migrations
+
+```bash
 npm run db:migrate
 ```
 
-Seed 30 days of metrics for an active Clerk organization:
+### 4. Seed organization metrics
 
 ```bash
 npm run db:seed -- --org-id=org_your_clerk_org_id
 ```
 
-The seed is idempotent: rerunning it updates the same organization/date rows
-instead of inserting duplicates.
-
-## Real-time verification
-
-Open the dashboard in two tabs using the same Clerk organization. Click
-**Send test event** in either tab. The event should appear in both feeds, and
-the online member badge should update as tabs connect or close.
-
-## AI chat verification
-
-Open **Ask AI** and ask, “What was our best revenue day?” Responses stream into
-the panel and are persisted per Clerk user and organization.
-
-## Team verification
-
-Open **Team** as an organization administrator. Invite a real secondary email,
-accept the invitation, then verify that role changes and removal update the
-member list immediately. A non-admin member can view the page but cannot see or
-invoke administrative controls.
-
-## Settings verification
-
-Open **Settings** as an organization administrator. Change the organization
-name or logo URL, save, and reload to verify persistence. Update the personal
-display name and notification preference, then sign in as a non-admin member
-to confirm that organization fields are read-only. The delete dialog requires
-the exact Clerk organization name before enabling deletion; use a disposable
-organization if testing the destructive action.
-
-## Verification
+### 5. Start the application
 
 ```bash
-npm test
-npm run lint
-npm run typecheck
-npm run build
+npm run dev
 ```
 
-Live signup, organization creation, switching, sign-out, and sign-in require
-valid Clerk keys and cannot be verified using placeholder credentials.
+Open [localhost:3000](http://localhost:3000).
+
+## Environment Variables
+
+See [`.env.example`](./.env.example) for the complete list.
+
+Required services:
+
+- Clerk application with Organizations enabled
+- Neon PostgreSQL database
+- Pusher Channels application
+- OpenRouter API key
+
+Optional public demo configuration:
+
+```env
+DEMO_USER_ID=user_xxx
+DEMO_EMAIL=demo@example.com
+```
+
+The demo user should remain an organization member, not an administrator.
+
+## Commands
+
+```bash
+npm run dev          # Start development server
+npm run build        # Create production build
+npm run lint         # Run ESLint
+npm run typecheck    # Run TypeScript checks
+npm test             # Run tests
+npm run db:generate  # Generate Drizzle migration
+npm run db:migrate   # Apply migrations
+npm run db:seed      # Seed organization metrics
+```
+
+## Project Status
+
+Authentication, analytics, real-time activity, AI chat, team management, settings, deployment, and public demo access are implemented.
+
+See [`Progress.MD`](./Progress.MD) for the full development handoff and planned improvements.
